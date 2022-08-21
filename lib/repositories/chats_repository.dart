@@ -26,12 +26,10 @@ abstract class IChatsRepository {
 
 class ChatsRepository extends BaseRepository<Chat, Message>
     implements IChatsRepository {
-  ChatsRepository(
-      {required FirestoreDataSource<Chat, Message> remoteDataSource})
-      : super(remoteDataSource: remoteDataSource);
+  ChatsRepository({required super.remoteDatabase});
 
   @override
-  Stream<List<Chat>> streamChats(String uid) => streamQuery(remoteDataSource
+  Stream<List<Chat>> streamChats(String uid) => streamQuery(remoteDatabase
       .where("membersIds", arrayContains: uid)
       .orderBy("lastMessageDate", descending: true));
 
@@ -51,7 +49,7 @@ class ChatsRepository extends BaseRepository<Chat, Message>
   @override
   Stream<List<Message>> streamMessages(String chatId) =>
       streamSubcollectionQuery(
-        remoteDataSource
+        remoteDatabase
             .getSubCollection(chatId)
             .orderBy('timeStamp', descending: true)
             .limit(50),
@@ -60,7 +58,7 @@ class ChatsRepository extends BaseRepository<Chat, Message>
 
 final chatsRepoPvdr = Provider(
   (ref) => ChatsRepository(
-    remoteDataSource: FirestoreDataSource(
+    remoteDatabase: RemoteDatabase(
       db: ref.read(databaseProvider),
       collectionPath: 'chats',
       subCollectionPath: 'messages',

@@ -1,18 +1,19 @@
 import 'package:get/get.dart';
-import 'package:reach_auth/providers/auth_providers.dart';
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
 import 'package:reach_research/models/group.dart';
 
-class ChatsListNotifier extends StateNotifier<List<Chat>> {
+class ChatsListNotifier extends StateNotifier<AsyncValue<List<Chat>>> {
   final ChatsRepository _repository;
-  final List<Chat> _chats;
 
-  ChatsListNotifier(
-    this._repository,
-    this._chats,
-  ) : super([]) {
-    state = _chats;
+  List<Chat> get _chats => state.value!;
+
+  ChatsListNotifier(this._repository, AsyncValue<List<Chat>> chatsAsync)
+      : super(const AsyncLoading()) {
+    chatsAsync.when(
+        data: (chats) => state = AsyncData(chats),
+        error: (e, t) => throw e,
+        loading: () => const AsyncLoading());
   }
 
   Future<void> createGroupChat({
@@ -278,21 +279,10 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
       await _repository.updateData(chat, chat.chatId);
 }
 
-final chatsPvdr = StateNotifierProvider<ChatsListNotifier, List<Chat>>(
-  (ref) {
-    List<Chat> chats = [];
-    final userId = ref.watch(userPvdr).value?.uid ?? "";
-
-    if (userId.isNotEmpty) {
-      ref.watch(chatsStreamPvdr).when(
-            data: (value) => chats = value,
-            error: (e, t) => throw (e),
-            loading: () => chats = [],
-          );
-    }
-    return ChatsListNotifier(
-      ref.read(chatsRepoPvdr),
-      chats,
-    );
-  },
+final chatsPvdr =
+    StateNotifierProvider<ChatsListNotifier, AsyncValue<List<Chat>>>(
+  (ref) => ChatsListNotifier(
+    ref.read(chatsRepoPvdr),
+    ref.watch(chatsStreamPvdr),
+  ),
 );
