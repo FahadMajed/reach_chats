@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
@@ -58,17 +56,14 @@ class ChatsInboxScreen extends ConsumerWidget {
                     final GroupChat groupChat = chat;
                     chatTitle = groupChat.groupName;
                     chatColor = groupChat.color;
-                    if (groupChat.isLastMessageSeen == 1) {
-                      isLastMessageSeen = true;
-                    }
+                    //TODO FIX IS LAST MESSAGE SEEN
+                    isLastMessageSeen = true;
                   } else if (chat is PeerChat) {
                     final PeerChat peerChat = chat;
                     chatColor = peerChat.participant.defaultColor;
                     chatTitle = peerChat.participant.name;
                     imageUrl = peerChat.participant.imageUrl;
-                    if (peerChat.isLastMessageSeen == 1) {
-                      isLastMessageSeen = true;
-                    }
+                    isLastMessageSeen = true;
                   }
 
                   return Column(
@@ -78,7 +73,7 @@ class ChatsInboxScreen extends ConsumerWidget {
                           color: isLastMessageSeen
                               ? Colors.white
                               : Colors.blue[50]!,
-                          chatColor: chatColor!,
+                          chatColor: chatColor,
                           isYou: isYou,
                           chatTitle: chatTitle,
                           lastMessage: chat.lastMessage,

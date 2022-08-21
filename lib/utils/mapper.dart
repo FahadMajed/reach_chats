@@ -1,9 +1,8 @@
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
 
-Chat chatFromMap(Map<String, dynamic> data) => data["isGroupChat"] ?? false
-    ? GroupChat.fromMap(data)
-    : PeerChat.fromMap(data);
+Chat chatFromMap(Map<String, dynamic> data) =>
+    data["isGroupChat"] ?? false ? GroupChat(data) : PeerChat(data);
 
 Map<String, dynamic> chatToMap(Chat chat) =>
     chat is GroupChat ? chat.toMap() : (chat as PeerChat).toMap();
@@ -26,33 +25,33 @@ Chat copyChatWith(
   int? color,
 }) =>
     toCopy is GroupChat
-        ? toCopy.copyWith(
-            chatId: chatId ?? toCopy.chatId,
-            participants: participants ?? toCopy.participants,
-            groupName: groupName ?? toCopy.groupName,
-            researcher: researcher ?? toCopy.researcher,
-            researchsInCommon: researchsInCommon ?? toCopy.researchsInCommon,
-            membersIds: membersIds ?? toCopy.membersIds,
-            isLastMessageSeen: isLastMessageSeen ?? toCopy.isLastMessageSeen,
-            color: color ?? toCopy.color,
-            dateOpenedByMembers:
-                dateOpenedByMembers ?? toCopy.dateOpenedByMembers,
-            lastMessageDate: lastMessageDate ?? toCopy.lastMessageDate,
-            lastMessage: lastMessage ?? toCopy.lastMessage,
-            lastMessageSenderId:
-                lastMessageSenderId ?? toCopy.lastMessageSenderId,
-          )
+        ? toCopy.copyWith({
+            'chatId': chatId,
+            'participants': participants,
+            'groupName': groupName,
+            'researcher': researcher,
+            'researchsInCommon': researchsInCommon,
+            'membersIds': membersIds,
+            'isLastMessageSeen': isLastMessageSeen,
+            'color': color,
+            'dateOpenedByMembers': dateOpenedByMembers,
+            'lastMessageDate': lastMessageDate,
+            'lastMessage': lastMessage,
+            'lastMessageSenderId': lastMessageSenderId,
+          })
         : (toCopy as PeerChat).copyWith(
-            chatId: chatId ?? toCopy.chatId,
-            participant: participant ?? (toCopy).participant,
-            researcher: researcher ?? toCopy.researcher,
-            researchsInCommon: researchsInCommon ?? toCopy.researchsInCommon,
-            membersIds: membersIds ?? toCopy.membersIds,
-            isLastMessageSeen: isLastMessageSeen ?? toCopy.isLastMessageSeen,
-            dateOpenedByMembers:
-                dateOpenedByMembers ?? toCopy.dateOpenedByMembers,
-            lastMessageDate: lastMessageDate ?? toCopy.lastMessageDate,
-            lastMessage: lastMessage ?? toCopy.lastMessage,
-            lastMessageSenderId:
-                lastMessageSenderId ?? toCopy.lastMessageSenderId,
+            {
+              'chatId': chatId,
+              'participant': participant,
+              'groupName': groupName,
+              'researcher': researcher,
+              'researchsInCommon': researchsInCommon,
+              'membersIds': membersIds,
+              'isLastMessageSeen': isLastMessageSeen,
+              'color': color,
+              'dateOpenedByMembers': dateOpenedByMembers,
+              'lastMessageDate': lastMessageDate,
+              'lastMessage': lastMessage,
+              'lastMessageSenderId': lastMessageSenderId,
+            },
           );

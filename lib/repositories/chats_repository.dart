@@ -1,96 +1,73 @@
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
 
-class ChatsRepository
-    implements
-        DatabaseRepository<Chat>,
-        SubCollectionRepository<Message>,
-        StreamedRepository<Chat, Message> {
-  final FirebaseFirestore _database;
-  late CollectionReference<Chat> collection;
+abstract class IChatsRepository {
+  Stream<List<Chat>> streamChats(String userId);
 
-  ChatsRepository(this._database) {
-    collection = _database.collection("chats").withConverter<Chat>(
-          fromFirestore: (snapshot, _) => chatFromMap(snapshot.data()!),
-          toFirestore: (chat, _) => chatToMap(chat),
-        );
-  }
+  Stream<List<Message>> streamMessages(String chatId);
 
-  @override
-  Stream<List<Chat>> streamDocuments(String uid) => collection
-      .where("membersIds", arrayContains: uid)
-      .orderBy("lastMessageDate", descending: true)
-      .snapshots()
-      .map((list) => list.docs.map((doc) => doc.data()).toList());
+  Future<void> createMessage(String chatId, Message m);
 
-  @override
-  Future<Chat> createDocument(Chat chat) async =>
-      await collection.doc(chat.chatId).set(chat).then((_) => chat);
-
-  @override
-  Stream<List<Message>> streamSubCollection(String chatId) => _database
-      .collection(FirestorePath.messages(chatId))
-      .withConverter<Message>(
-          fromFirestore: (snap, _) => Message.fromFirestore(snap.data()!),
-          toFirestore: (message, _) => message.toMap())
-      .orderBy('timeStamp', descending: true)
-      .limit(50)
-      .snapshots()
-      .map((list) => list.docs.map((messageDoc) => messageDoc.data()).toList());
-
-  @override
-  Future<void> createSubDocument(
+  ///we dont want to delete the chat, just remove it
+  ///from the research, in case participant was kicked
+  ///from a research
+  Future<void> removeResearchIdFromChat(
     String chatId,
-    String messageId,
-    Message message,
-  ) async =>
-      await _database
-          .collection(FirestorePath.messages(chatId))
-          .doc(message.messageId)
-          .set(message.toMap());
+    String researchId,
+  );
 
-  @override
-  Future<void> updateDocument(Chat chat) async =>
-      await collection.doc(chat.chatId).update(chatToMap(chat));
-
-  @override
-  Future<void> deleteDocument(String chatId) async =>
-      await collection.doc(chatId).delete();
-
-  @override
-  Future<Chat> getDocument(String id) async => collection
-      .doc(id)
-      .get()
-      .then((value) => chatFromMap(value.data() as Map<String, dynamic>));
-
-  @override
-  Future<void> updateFieldArrayUnion(
-    String id,
-    String field,
-    List union,
-  ) async =>
-      collection.doc(id).update({field: FieldValue.arrayUnion(union)});
-
-  @override
-  Future<void> updateFieldArrayRemove(
-    String id,
-    String field,
-    List remove,
-  ) async =>
-      collection.doc(id).update({field: FieldValue.arrayRemove(remove)});
-
-  @override
-  Future<List<Chat>> getDocuments(String clause, {bool defaultFlow = true}) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> updateField(String docId, String field, data) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Stream<Chat> streamDocument(String clause) {
-    throw UnimplementedError();
-  }
+  ///add research id to chat, so it chats can be
+  ///filtered by research id
+  Future<void> addResearchIdToChats(
+    String chatId,
+    String researchId,
+  );
 }
+
+class ChatsRepository extends BaseRepository<Chat, Message>
+    implements IChatsRepository {
+  ChatsRepository(
+      {required FirestoreDataSource<Chat, Message> remoteDataSource})
+      : super(remoteDataSource: remoteDataSource);
+
+  @override
+  Stream<List<Chat>> streamChats(String uid) => streamQuery(remoteDataSource
+      .where("membersIds", arrayContains: uid)
+      .orderBy("lastMessageDate", descending: true));
+
+  @override
+  Future<void> addResearchIdToChats(String chatId, String researchId) async =>
+      await updateFieldArrayUnion(chatId, 'researchsInCommon', [researchId]);
+
+  @override
+  Future<void> removeResearchIdFromChat(
+          String chatId, String researchId) async =>
+      await updateFieldArrayRemove(chatId, 'researchsInCommon', [researchId]);
+
+  @override
+  Future<void> createMessage(String chatId, Message message) async =>
+      await createSubdocument(chatId, message.messageId, message);
+
+  @override
+  Stream<List<Message>> streamMessages(String chatId) =>
+      streamSubcollectionQuery(
+        remoteDataSource
+            .getSubCollection(chatId)
+            .orderBy('timeStamp', descending: true)
+            .limit(50),
+      );
+}
+
+final chatsRepoPvdr = Provider(
+  (ref) => ChatsRepository(
+    remoteDataSource: FirestoreDataSource(
+      db: ref.read(databaseProvider),
+      collectionPath: 'chats',
+      subCollectionPath: 'messages',
+      fromMap: (snapshot, _) => chatFromMap(snapshot.data()!),
+      toMap: (chat, _) => chatToMap(chat),
+      subFromMap: (snapshot, _) => Message.fromFirestore(snapshot.data() ?? {}),
+      subToMap: (message, _) => message.toMap(),
+    ),
+  ),
+);

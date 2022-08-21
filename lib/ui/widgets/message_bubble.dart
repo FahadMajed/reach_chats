@@ -61,7 +61,7 @@ class DateInfo extends StatelessWidget {
           child: Text(
               DateTime.now().toString().contains(dateToString)
                   ? "today".tr
-                  : Formatter.parseDateNoTime(dateToString),
+                  : Formatter.parseDateNoTime(dateToString)!,
               style: titleSmallBold),
         ),
       ),

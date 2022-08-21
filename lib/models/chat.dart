@@ -1,51 +1,43 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:reach_core/core/models/researcher.dart';
+import 'package:reach_core/core/core.dart';
 
-class Chat {
+class Chat extends BaseModel<Chat> {
   //insert researcher and part object
-  final String? chatId;
-  final List researchsInCommon;
-  final Researcher researcher;
+  Chat(Map<String, dynamic> jSON) : super(jSON);
 
-  final bool isGroupChat;
+  String get chatId => data['chatId'];
 
-  final List membersIds;
-  final Duration sinceLastMessage;
-  final int? color;
+  List get researchsInCommon => data['researchsInCommon'];
 
-  final Map<String, dynamic> dateOpenedByMembers;
-  final int isLastMessageSeen;
-  final Timestamp lastMessageDate;
-  final String lastMessage;
-  final String lastMessageSenderId;
+  Researcher get researcher => Researcher(data['researcher']);
 
-  Chat(
-      {this.chatId,
-      required this.researchsInCommon,
-      required this.researcher,
-      required this.isGroupChat,
-      required this.sinceLastMessage,
-      this.color,
-      required this.membersIds,
-      required this.dateOpenedByMembers,
-      required this.lastMessageDate,
-      required this.lastMessage,
-      required this.lastMessageSenderId,
-      required this.isLastMessageSeen});
+  bool get isGroupChat => data['isGroupChat'];
 
-  factory Chat.fromFirestore(Map data) {
-    return Chat(
-        chatId: data['chatId'] ?? '',
-        researcher: Researcher.fromFirestore(data["researcher"]),
-        researchsInCommon: data['researchsInCommon'] ?? [],
-        isGroupChat: data["isGroupChat"] ?? false,
-        membersIds: data["membersIds"] ?? [],
-        dateOpenedByMembers: data["dateOpenedByMembers"] ?? {},
-        color: data["color"],
-        lastMessageDate: data['lastMessageDate'],
-        lastMessage: data['lastMessage'] ?? '',
-        lastMessageSenderId: data['lastMessageSenderId'] ?? '',
-        isLastMessageSeen: data["isLastMessageSeen"] ?? -1,
-        sinceLastMessage: DateTime.now().difference(data["lastMessageDate"]));
-  }
+  List get membersIds => data['membersIds'];
+
+  Duration get sinceLastMessage =>
+      DateTime.now().difference(data['lastMessageDate'].toDate());
+
+  int get color => data['color'];
+
+  Map<String, dynamic> get dateOpenedByMembers => data['dateOpenedByMembers'];
+
+  Timestamp get lastMessageDate => data['lastMessageDate'];
+
+  String get lastMessage => data['lastMessage'];
+
+  String get lastMessageSenderId => data['lastMessageSenderId'];
+
+  @override
+  Chat copyWith(Map<String, dynamic> newData) => Chat(
+        {
+          ...data,
+          ...newData..removeWhere((key, value) => value == null),
+        },
+      );
+
+  @override
+  Map<String, dynamic> toMap() => {
+        ...super.toMap(),
+        'researcher': researcher.toPartialMap(),
+      };
 }

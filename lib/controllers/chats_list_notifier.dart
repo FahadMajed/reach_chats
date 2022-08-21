@@ -1,30 +1,27 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:reach_auth/providers/auth_providers.dart';
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
 import 'package:reach_research/models/group.dart';
 
 class ChatsListNotifier extends StateNotifier<List<Chat>> {
-  late ChatsRepository repository;
-  final Reader reader;
-  final String uid;
-  final List<Chat> chats;
+  final ChatsRepository _repository;
+  final List<Chat> _chats;
 
-  ChatsListNotifier({
-    required this.reader,
-    required this.uid,
-    required this.chats,
-  }) : super([]) {
-    repository = reader(chatsRepoPvdr);
-    state = chats;
+  ChatsListNotifier(
+    this._repository,
+    this._chats,
+  ) : super([]) {
+    state = _chats;
   }
 
-  Future<Chat> createGroupChat(
-      {required List<Participant> participants,
-      required String groupName,
-      required String researchId,
-      required String groupId,
-      required Researcher researcher}) async {
+  Future<void> createGroupChat({
+    required List<Participant> participants,
+    required String groupName,
+    required String researchId,
+    required String groupId,
+    required Researcher researcher,
+  }) async {
     Map<String, dynamic> dateOpenedByMembers = {};
     final membersIds = [
       researcher.researcherId,
@@ -34,71 +31,76 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
       dateOpenedByMembers[memberId] = Timestamp.now();
     }
     GroupChat groupChat = GroupChat(
-      chatId: groupId,
-      researchsInCommon: [researchId],
-      researcher: researcher,
-      participants: participants,
-      groupName: groupName,
-      membersIds: membersIds,
-      lastMessage: "",
-      lastMessageDate: Timestamp.now(),
-      dateOpenedByMembers: dateOpenedByMembers,
-      color: ColorGenerator.getRandomColor().value,
-      isLastMessageSeen: 1,
-      lastMessageSenderId: researcher.researcherId,
-      sinceLastMessage: DateTime.now().difference(DateTime.now()),
+      {
+        'chatId': groupId,
+        'researchsInCommon': [researchId],
+        'researcher': researcher,
+        'participants': participants,
+        'groupName': groupName,
+        'membersIds': membersIds,
+        'lastMessage': "",
+        'lastMessageDate': Timestamp.now(),
+        'dateOpenedByMembers': dateOpenedByMembers,
+        'color': ColorGenerator.getRandomColor().value,
+        'isLastMessageSeen': 1,
+        'lastMessageSenderId': researcher.researcherId,
+        'sinceLastMessage': DateTime.now().difference(DateTime.now()),
+      },
     );
 
-    return await repository.createDocument(groupChat);
+    await _repository.create(groupChat, groupId);
   }
 
-  Future<Chat> createPeerChat(
+  Future<PeerChat> createPeerChat(
     String chatId,
     Researcher researcher,
     Participant participant,
     String researchId,
   ) async {
     PeerChat peerChat = PeerChat(
-      chatId: chatId,
-      researcher: researcher,
-      lastMessageDate: Timestamp.now(),
-      dateOpenedByMembers: {
-        researcher.researcherId: Timestamp.now(),
-        participant.participantId: Timestamp.now(),
+      {
+        'chatId': chatId,
+        'researcher': researcher,
+        'lastMessageDate': Timestamp.now(),
+        'dateOpenedByMembers': {
+          researcher.researcherId: Timestamp.now(),
+          participant.participantId: Timestamp.now(),
+        },
+        'researchsInCommon': [researchId],
+        'participant': participant,
+        'membersIds': [researcher.researcherId, participant.participantId],
+        'lastMessage': "",
+        'isLastMessageSeen': 1,
+        'lastMessageSenderId': "",
+        'sinceLastMessage': DateTime.now().difference(DateTime.now()),
       },
-      researchsInCommon: [researchId],
-      participant: participant,
-      membersIds: [researcher.researcherId, participant.participantId],
-      lastMessage: "",
-      isLastMessageSeen: 1,
-      lastMessageSenderId: "",
-      sinceLastMessage: DateTime.now().difference(DateTime.now()),
     );
 
     fcm.subscribeToTopic(researcher.researcherId + participant.participantId);
 
-    return await repository.createDocument(peerChat);
+    await _repository.create(peerChat, chatId);
+    return peerChat;
   }
 
   void sendMessage(String chatId, Message message) =>
-      repository.createSubDocument(chatId, message.messageId, message);
+      _repository.createMessage(chatId, message);
 
   bool chatExists(String chatId) =>
-      chats.indexWhere((c) => c.chatId == chatId) != -1;
+      _chats.indexWhere((c) => c.chatId == chatId) != -1;
 
   Chat? getChat(String chatId) =>
-      chatExists(chatId) ? chats.firstWhere((c) => c.chatId == chatId) : null;
+      chatExists(chatId) ? _chats.firstWhere((c) => c.chatId == chatId) : null;
 
   Future<void> removeParticipantChatsFromResearch(
-    participantId,
-    researchId,
+    String participantId,
+    String researchId,
   ) async {
-    for (final chat in chats) {
+    for (final chat in _chats) {
       if (chatIsInResearch(chat, participantId, researchId)) {
         if (chat is PeerChat) {
-          removeResearchIdFromChat(chat.chatId!, researchId);
+          removeResearchIdFromChat(chat.chatId, researchId);
         } else {
-          _removeFromGroupChat(chat.chatId!, participantId);
+          _removeFromGroupChat(chat.chatId, participantId);
         }
       }
     }
@@ -106,11 +108,7 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
 
   bool removeResearchIdFromChat(String chatId, String researchId) {
     if (chatExists(chatId) == false) return false;
-    repository.updateFieldArrayRemove(
-      chatId,
-      "researchsInCommon",
-      [researchId],
-    );
+    _repository.removeResearchIdFromChat(chatId, researchId);
     return true;
   }
 
@@ -121,7 +119,7 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
     } else {
       final chat = getChat(chatId) as GroupChat;
       chat.removeMember(participantId);
-      await repository.updateDocument(chat);
+      await updateChat(chat);
       return true;
     }
   }
@@ -144,13 +142,13 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
   Future<void> addToGroupChat(String toId, Participant participant) async {
     final chat = getChat(toId) as GroupChat;
     chat.addMember(participant);
-    await repository.updateDocument(chat);
+    await updateChat(chat);
   }
 
   List<Chat> chatsForResearch(researchId) =>
-      chats.where((c) => c.researchsInCommon.contains(researchId)).toList();
+      _chats.where((c) => c.researchsInCommon.contains(researchId)).toList();
 
-  List<Chat> groupChatsForResearch(researchId) => chats
+  List<Chat> groupChatsForResearch(researchId) => _chats
       .where(
         (c) => c.researchsInCommon.contains(researchId) && c is GroupChat,
       )
@@ -161,7 +159,7 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
       chat.researchsInCommon.contains(researchId);
 
   Future<void> deleteChat(String groupId) async {
-    await repository.deleteDocument(groupId);
+    await _repository.delete(groupId);
   }
 
   Future<void> reorderGroups(
@@ -175,23 +173,23 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
           //reorder groups names
           chat = copyChatWith(chat, groupName: "${group.groupName} - $title");
 
-          await repository.updateDocument(chat);
+          await updateChat(chat);
         }
       }
     }
   }
 
   Future<void> updateResearcher(researcher) async {
-    for (final chat in chats) {
-      await repository
-          .updateDocument(copyChatWith(chat, researcher: researcher));
+    for (final chat in _chats) {
+      await _repository.updateData(
+          copyChatWith(chat, researcher: researcher), chat.chatId);
     }
   }
 
   Future<void> updateParticipantData(researcher) async {
-    for (final chat in chats) {
-      await repository
-          .updateDocument(copyChatWith(chat, researcher: researcher));
+    for (final chat in _chats) {
+      await _repository.updateData(
+          copyChatWith(chat, researcher: researcher), chat.chatId);
     }
   }
 
@@ -203,11 +201,7 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
     for (final participantId in participantsIds) {
       final chatId = Formatter.formatChatId(researcherId, participantId);
       if (chatExists(chatId)) {
-        await repository.updateFieldArrayUnion(
-          chatId,
-          "researchsInCommon",
-          [researchId],
-        );
+        await _repository.addResearchIdToChats(chatId, researchId);
       }
     }
   }
@@ -219,11 +213,7 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
   ) async {
     final chatId = Formatter.formatChatId(researcherId, participantId);
     if (chatExists(chatId)) {
-      await repository.updateFieldArrayUnion(
-        chatId,
-        "researchsInCommon",
-        [researchId],
-      );
+      await _repository.addResearchIdToChats(chatId, researchId);
     }
   }
 
@@ -247,18 +237,18 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
         );
         final chat = getChat(chatId);
 
-        await repository.updateDocument(
-          copyChatWith(
-            chat!,
-            dateOpenedByMembers: {
-              ...chat.dateOpenedByMembers,
-              chat.researcher.researcherId: Timestamp.now()
-            },
-            lastMessage: content,
-            lastMessageDate: timeStamp,
-            lastMessageSenderId: researcherId,
-          ),
-        );
+        await _repository.updateData(
+            copyChatWith(
+              chat!,
+              dateOpenedByMembers: {
+                ...chat.dateOpenedByMembers,
+                chat.researcher.researcherId: Timestamp.now()
+              },
+              lastMessage: content,
+              lastMessageDate: timeStamp,
+              lastMessageSenderId: researcherId,
+            ),
+            chat.chatId);
       }
     }
   }
@@ -284,5 +274,25 @@ class ChatsListNotifier extends StateNotifier<List<Chat>> {
     }
   }
 
-  void updateChat(Chat chat) => repository.updateDocument(chat);
+  Future<void> updateChat(Chat chat) async =>
+      await _repository.updateData(chat, chat.chatId);
 }
+
+final chatsPvdr = StateNotifierProvider<ChatsListNotifier, List<Chat>>(
+  (ref) {
+    List<Chat> chats = [];
+    final userId = ref.watch(userPvdr).value?.uid ?? "";
+
+    if (userId.isNotEmpty) {
+      ref.watch(chatsStreamPvdr).when(
+            data: (value) => chats = value,
+            error: (e, t) => throw (e),
+            loading: () => chats = [],
+          );
+    }
+    return ChatsListNotifier(
+      ref.read(chatsRepoPvdr),
+      chats,
+    );
+  },
+);

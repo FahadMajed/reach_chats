@@ -1,7 +1,6 @@
 // ignore_for_file: no_logic_in_create_state
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:reach_auth/reach_auth.dart';
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
@@ -82,12 +81,13 @@ class _ChatScreenBottomBarState extends ConsumerState<ChatScreenBottomBar> {
                   );
 
                   if (chat is GroupChat) {
-                    chatsNotifier.sendMessage(chat.chatId!, newMessage);
+                    chatsNotifier.sendMessage(chat.chatId, newMessage);
                   } else if (chat is PeerChat) {
                     chatsNotifier.sendMessage(
-                        chat.chatId!,
-                        newMessage.copyWith(
-                            toId: (chat as PeerChat).researcher.researcherId));
+                      chat.chatId,
+                      newMessage.copyWith(
+                          toId: (chat as PeerChat).researcher.researcherId),
+                    );
                   }
 
                   //update

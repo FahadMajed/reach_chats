@@ -22,8 +22,8 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
 
   late Message? lastMessage;
 
-  //MAKE IT FROM NOTIFIER
-  late ChatsRepository chatsRepo;
+  late ChatsListNotifier chatsNotifier;
+
   String? currentUserId = "";
 
   _ChatScreenBodyState(this.chat);
@@ -31,7 +31,8 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
   @override
   Widget build(BuildContext context) {
     final watch = ref.watch;
-    chatsRepo = watch(chatsRepoPvdr);
+    chatsNotifier = watch(chatsPvdr.notifier);
+
     currentUserId = watch(userPvdr).value?.uid;
 
     final messagesValue = watch(messagesStreamPvdr(widget.chat.chatId));
@@ -91,7 +92,6 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
           ),
         );
       } catch (e) {
- 
         return Text(
           "something_went_wrong".tr,
           style: titleSmall,
@@ -107,7 +107,7 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
     //in case there is a message
 
     if (lastMessage != null) {
-      chatsRepo.updateDocument(
+      chatsNotifier.updateChat(
         copyChatWith(
           chat,
           lastMessageSenderId: lastMessage!.fromId,
@@ -122,7 +122,7 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
     }
     // case no messages, we want to update date opened only
     else {
-      chatsRepo.updateDocument(
+      chatsNotifier.updateChat(
         copyChatWith(
           chat,
           dateOpenedByMembers: {
