@@ -16,7 +16,7 @@ class ChatsListNotifier extends StateNotifier<AsyncValue<List<Chat>>> {
         loading: () => const AsyncLoading());
   }
 
-  Future<void> createGroupChat({
+  Future<GroupChat> createGroupChat({
     required List<Participant> participants,
     required String groupName,
     required String researchId,
@@ -50,6 +50,7 @@ class ChatsListNotifier extends StateNotifier<AsyncValue<List<Chat>>> {
     );
 
     await _repository.create(groupChat, groupId);
+    return groupChat;
   }
 
   Future<PeerChat> createPeerChat(

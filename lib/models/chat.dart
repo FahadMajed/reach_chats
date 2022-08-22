@@ -40,4 +40,7 @@ class Chat extends BaseModel<Chat> {
         ...super.toMap(),
         'researcher': researcher.toPartialMap(),
       };
+
+  @override
+  List<Object?> get props => [toMap()];
 }

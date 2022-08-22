@@ -29,4 +29,7 @@ class PeerChat extends Chat {
   void removeCommonResearch(String researchId) {
     researchsInCommon.remove(researchId);
   }
+
+  @override
+  List<Object?> get props => [toMap()];
 }

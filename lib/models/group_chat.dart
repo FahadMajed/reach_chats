@@ -40,4 +40,7 @@ class GroupChat extends Chat {
     participants.add(part);
     dateOpenedByMembers[part.participantId] = Timestamp.now();
   }
+
+  @override
+  List<Object?> get props => [toMap()];
 }
