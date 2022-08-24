@@ -1,3 +1,4 @@
+import 'package:reach_chats/models/message.dart';
 import 'package:reach_core/core/core.dart';
 
 class Chat extends BaseModel<Chat> {
@@ -43,4 +44,12 @@ class Chat extends BaseModel<Chat> {
 
   @override
   List<Object?> get props => [toMap()];
+
+  bool isLastMessageSeenByUser(String userId) {
+    if ((dateOpenedByMembers[userId] as Timestamp).compareTo(lastMessageDate) !=
+        -1) {
+      return true;
+    }
+    return false;
+  }
 }

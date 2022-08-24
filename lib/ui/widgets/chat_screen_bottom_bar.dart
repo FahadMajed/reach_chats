@@ -89,20 +89,6 @@ class _ChatScreenBottomBarState extends ConsumerState<ChatScreenBottomBar> {
                           toId: (chat as PeerChat).researcher.researcherId),
                     );
                   }
-
-                  //update
-                  chatsNotifier.updateChat(
-                    copyChatWith(
-                      chat,
-                      lastMessageSenderId: newMessage.fromId,
-                      lastMessage: newMessage.content,
-                      lastMessageDate: newMessage.timeStamp,
-                      dateOpenedByMembers: {
-                        ...chat.dateOpenedByMembers,
-                        currentUserId: Timestamp.now()
-                      },
-                    ),
-                  );
                 }
 
                 content = "";

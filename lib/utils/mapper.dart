@@ -14,7 +14,6 @@ Chat copyChatWith(
   String? chatId,
   List? researchsInCommon,
   List? membersIds,
-  int? isLastMessageSeen,
   Map<String, dynamic>? dateOpenedByMembers,
   Timestamp? lastMessageDate,
   String? lastMessage,
@@ -23,35 +22,22 @@ Chat copyChatWith(
   List<Participant>? participants,
   String? groupName,
   int? color,
-}) =>
-    toCopy is GroupChat
-        ? toCopy.copyWith({
-            'chatId': chatId,
-            'participants': participants,
-            'groupName': groupName,
-            'researcher': researcher,
-            'researchsInCommon': researchsInCommon,
-            'membersIds': membersIds,
-            'isLastMessageSeen': isLastMessageSeen,
-            'color': color,
-            'dateOpenedByMembers': dateOpenedByMembers,
-            'lastMessageDate': lastMessageDate,
-            'lastMessage': lastMessage,
-            'lastMessageSenderId': lastMessageSenderId,
-          })
-        : (toCopy as PeerChat).copyWith(
-            {
-              'chatId': chatId,
-              'participant': participant,
-              'groupName': groupName,
-              'researcher': researcher,
-              'researchsInCommon': researchsInCommon,
-              'membersIds': membersIds,
-              'isLastMessageSeen': isLastMessageSeen,
-              'color': color,
-              'dateOpenedByMembers': dateOpenedByMembers,
-              'lastMessageDate': lastMessageDate,
-              'lastMessage': lastMessage,
-              'lastMessageSenderId': lastMessageSenderId,
-            },
-          );
+}) {
+  final newData = {
+    'chatId': chatId,
+    'participants': participants?.map((e) => e.toPartialMap()).toList(),
+    'groupName': groupName,
+    'researcher': researcher?.toPartialMap(),
+    'researchsInCommon': researchsInCommon,
+    'membersIds': membersIds,
+    'color': color,
+    'dateOpenedByMembers': dateOpenedByMembers,
+    'lastMessageDate': lastMessageDate,
+    'lastMessage': lastMessage,
+    'lastMessageSenderId': lastMessageSenderId,
+    'participant': participant?.toPartialMap(),
+  };
+  return toCopy is GroupChat
+      ? toCopy.copyWith(newData)
+      : (toCopy as PeerChat).copyWith(newData);
+}

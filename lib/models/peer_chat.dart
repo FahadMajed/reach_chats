@@ -21,7 +21,7 @@ class PeerChat extends Chat {
           ...data,
           ...newData
             ..removeWhere(
-              (key, value) => value == false,
+              (key, value) => value == null,
             ),
         },
       );

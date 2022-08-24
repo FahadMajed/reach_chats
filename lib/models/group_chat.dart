@@ -24,22 +24,10 @@ class GroupChat extends Chat {
           ...data,
           ...newData
             ..removeWhere(
-              (key, value) => value == false,
+              (key, value) => value == null,
             ),
         },
       );
-
-  void removeMember(String participantId) {
-    membersIds.remove(participantId);
-    dateOpenedByMembers.remove(participantId);
-    participants.removeWhere((p) => p.participantId == participantId);
-  }
-
-  void addMember(Participant part) {
-    membersIds.add(part.participantId);
-    participants.add(part);
-    dateOpenedByMembers[part.participantId] = Timestamp.now();
-  }
 
   @override
   List<Object?> get props => [toMap()];

@@ -33,6 +33,21 @@ class ChatsRepository extends BaseRepository<Chat, Message>
       .where("membersIds", arrayContains: uid)
       .orderBy("lastMessageDate", descending: true));
 
+  Future<List<Chat>> fetchChats(String uid) => getQuery(remoteDatabase
+      .where("membersIds", arrayContains: uid)
+      .orderBy("lastMessageDate", descending: true));
+
+  Future<Chat?> fetchChat(String chatId) async =>
+      await remoteDatabase.getDocument(chatId);
+
+  Future<List<Message>> fetchMessagesForChat(String chatId) =>
+      getQuerySubcollection(
+        remoteDatabase
+            .getSubCollection(chatId)
+            .orderBy('timeStamp', descending: true)
+            .limit(50),
+      );
+
   @override
   Future<void> addResearchIdToChats(String chatId, String researchId) async =>
       await updateFieldArrayUnion(chatId, 'researchsInCommon', [researchId]);
@@ -54,6 +69,13 @@ class ChatsRepository extends BaseRepository<Chat, Message>
             .orderBy('timeStamp', descending: true)
             .limit(50),
       );
+
+  Future<void> updateDateOpened(String chatId, String currentUserId) async =>
+      await updateField(
+        chatId,
+        'dateOpenedByMembers.$currentUserId',
+        Timestamp.now(),
+      );
 }
 
 final chatsRepoPvdr = Provider(
@@ -62,7 +84,7 @@ final chatsRepoPvdr = Provider(
       db: ref.read(databaseProvider),
       collectionPath: 'chats',
       subCollectionPath: 'messages',
-      fromMap: (snapshot, _) => chatFromMap(snapshot.data()!),
+      fromMap: (snapshot, _) => chatFromMap(snapshot.data() ?? {}),
       toMap: (chat, _) => chatToMap(chat),
       subFromMap: (snapshot, _) => Message.fromFirestore(snapshot.data() ?? {}),
       subToMap: (message, _) => message.toMap(),

@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:get/get.dart';
 import 'package:reach_auth/reach_auth.dart';
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
@@ -33,7 +31,7 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
     final watch = ref.watch;
     chatsNotifier = watch(chatsPvdr.notifier);
 
-    currentUserId = watch(userPvdr).value?.uid;
+    currentUserId = watch(userIdPvdr);
 
     final messagesValue = watch(messagesStreamPvdr(widget.chat.chatId));
     Widget sortMessages() {
@@ -104,35 +102,10 @@ class _ChatScreenBodyState extends ConsumerState<ChatScreenBody> {
 
   @override
   void dispose() {
-    //in case there is a message
-
-    if (lastMessage != null) {
-      chatsNotifier.updateChat(
-        copyChatWith(
-          chat,
-          lastMessageSenderId: lastMessage!.fromId,
-          lastMessage: lastMessage!.content,
-          lastMessageDate: lastMessage!.timeStamp,
-          dateOpenedByMembers: {
-            ...chat.dateOpenedByMembers,
-            currentUserId!: Timestamp.now()
-          },
-        ),
-      );
-    }
-    // case no messages, we want to update date opened only
-    else {
-      chatsNotifier.updateChat(
-        copyChatWith(
-          chat,
-          dateOpenedByMembers: {
-            ...chat.dateOpenedByMembers,
-            currentUserId!: Timestamp.now()
-          },
-        ),
-      );
-    }
-
+    chatsNotifier.updateDateOpened(
+      chat.chatId,
+      currentUserId!,
+    );
     super.dispose();
   }
 }

@@ -71,4 +71,9 @@ class Message {
       timeStamp: timeStamp ?? this.timeStamp,
     );
   }
+
+  @override
+  String toString() {
+    return 'Message(messageId: $messageId, content: $content, fromId: $fromId, toId: $toId, timeStamp: $timeStamp)';
+  }
 }

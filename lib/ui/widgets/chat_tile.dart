@@ -1,39 +1,49 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:get/get.dart';
+import 'package:reach_auth/providers/providers.dart';
+import 'package:reach_chats/models/models.dart';
+import 'package:reach_chats/ui/ui.dart';
 import 'package:reach_core/core/core.dart';
 
 class ChatListTile extends ConsumerWidget {
-  final String chatTitle;
-  final String lastMessage;
-  final int chatColor;
-  final Timestamp lastMessageDate;
-  final Color color;
-  final Function() onTap;
-  final bool isYou;
-  final String imageUrl;
+  final Chat chat;
 
-  const ChatListTile(
-      {Key? key,
-      required this.color,
-      required this.chatTitle,
-      required this.chatColor,
-      required this.lastMessage,
-      required this.lastMessageDate,
-      required this.onTap,
-      required this.imageUrl,
-      required this.isYou})
-      : super(key: key);
+  const ChatListTile({
+    Key? key,
+    required this.chat,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context, ref) {
-    final content = ref.watch(contentState(lastMessage));
+    final currentUserId = ref.watch(userIdPvdr);
+    bool isYou = currentUserId == chat.lastMessageSenderId;
+
+    String chatTitle = "";
+
+    int? chatColor = 0;
+
+    bool isLastMessageSeen = chat.isLastMessageSeenByUser(currentUserId);
+
+    String imageUrl = "";
+
+    if (chat is GroupChat) {
+      final GroupChat groupChat = chat as GroupChat;
+      chatTitle = groupChat.groupName;
+      chatColor = groupChat.color;
+    } else if (chat is PeerChat) {
+      final PeerChat peerChat = chat as PeerChat;
+      chatColor = peerChat.participant.defaultColor;
+      chatTitle = peerChat.participant.name;
+      imageUrl = peerChat.participant.imageUrl;
+    }
+
+    final content = ref.watch(contentState(chat.lastMessage));
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => Get.to(ChatScreen(chat)),
       child: Container(
         height: 75,
-        color: color,
+        color: isLastMessageSeen ? Colors.white : Colors.blue[50]!,
         child: Row(
           children: [
             sizedWidth8,
@@ -62,7 +72,9 @@ class ChatListTile extends ConsumerWidget {
                           style: titleSmallBold,
                         ),
                         Text(
-                          Formatter.formatSinceLastMessage(lastMessageDate),
+                          Formatter.formatSinceLastMessage(
+                            chat.lastMessageDate,
+                          ),
                           style: descMed,
                         ),
                       ],
