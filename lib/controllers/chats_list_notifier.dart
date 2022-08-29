@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:reach_chats/chats.dart';
 import 'package:reach_core/core/core.dart';
-import 'package:reach_research/models/group.dart';
+import 'package:reach_research/domain/models/group.dart';
 
 class ChatsListNotifier extends StateNotifier<AsyncValue<List<Chat>>> {
   final ChatsRepository _repository;
@@ -258,7 +258,7 @@ class ChatsListNotifier extends StateNotifier<AsyncValue<List<Chat>>> {
     for (final participantId in participantsIds) {
       final chatId = Formatter.formatChatId(researcherId, participantId);
       if (_chatExists(chatId)) {
-        await _repository.addResearchIdToChats(chatId, researchId);
+        await _repository.addResearchIdToChat(chatId, researchId);
       }
     }
   }
@@ -268,7 +268,7 @@ class ChatsListNotifier extends StateNotifier<AsyncValue<List<Chat>>> {
     String researchId,
   ) async {
     if (_chatExists(chatId)) {
-      await _repository.addResearchIdToChats(chatId, researchId);
+      await _repository.addResearchIdToChat(chatId, researchId);
     }
   }
 

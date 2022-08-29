@@ -18,7 +18,7 @@ abstract class IChatsRepository {
 
   ///add research id to chat, so it chats can be
   ///filtered by research id
-  Future<void> addResearchIdToChats(
+  Future<void> addResearchIdToChat(
     String chatId,
     String researchId,
   );
@@ -49,13 +49,23 @@ class ChatsRepository extends BaseRepository<Chat, Message>
       );
 
   @override
-  Future<void> addResearchIdToChats(String chatId, String researchId) async =>
+  Future<void> addResearchIdToChat(String chatId, String researchId) async =>
       await updateFieldArrayUnion(chatId, 'researchsInCommon', [researchId]);
 
   @override
   Future<void> removeResearchIdFromChat(
           String chatId, String researchId) async =>
       await updateFieldArrayRemove(chatId, 'researchsInCommon', [researchId]);
+
+  Future<void> removeParticipantFromGroupChat(
+    String chatId,
+    Participant participant,
+  ) async {
+    await updateFieldArrayRemove(
+        chatId, 'participants', [participant.toPartialMap()]);
+    await updateFieldArrayRemove(
+        chatId, 'membersIds', [participant.participantId]);
+  }
 
   @override
   Future<void> createMessage(String chatId, Message message) async =>
@@ -76,12 +86,19 @@ class ChatsRepository extends BaseRepository<Chat, Message>
         'dateOpenedByMembers.$currentUserId',
         Timestamp.now(),
       );
+
+  Future<void> updateGroupName(String groupId, String newName) async =>
+      await updateField(
+        groupId,
+        'groupName',
+        newName,
+      );
 }
 
 final chatsRepoPvdr = Provider(
   (ref) => ChatsRepository(
     remoteDatabase: RemoteDatabase(
-      db: ref.read(databaseProvider),
+      db: ref.read(databasePvdr),
       collectionPath: 'chats',
       subCollectionPath: 'messages',
       fromMap: (snapshot, _) => chatFromMap(snapshot.data() ?? {}),
