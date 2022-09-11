@@ -6,7 +6,7 @@ abstract class IChatsRepository {
 
   Stream<List<Message>> streamMessages(String chatId);
 
-  Future<void> createMessage(String chatId, Message m);
+  Future<void> createMessage(Chat chat, Message m);
 
   ///we dont want to delete the chat, just remove it
   ///from the research, in case participant was kicked
@@ -18,7 +18,7 @@ abstract class IChatsRepository {
 
   ///add research id to chat, so it chats can be
   ///filtered by research id
-  Future<void> addResearchIdToChat(
+  Future<void> addResearchIdToPeerChat(
     String chatId,
     String researchId,
   );
@@ -29,16 +29,15 @@ class ChatsRepository extends BaseRepository<Chat, Message>
   ChatsRepository({required super.remoteDatabase});
 
   @override
-  Stream<List<Chat>> streamChats(String uid) => streamQuery(remoteDatabase
-      .where("membersIds", arrayContains: uid)
-      .orderBy("lastMessageDate", descending: true));
+  Stream<List<Chat>> streamChats(String uid) =>
+      streamQuery(where("membersIds", arrayContains: uid)
+          .orderBy("lastMessageDate", descending: true));
 
-  Future<List<Chat>> fetchChats(String uid) => getQuery(remoteDatabase
-      .where("membersIds", arrayContains: uid)
-      .orderBy("lastMessageDate", descending: true));
+  Future<List<Chat>> fetchChats(String uid) =>
+      getQuery(where("membersIds", arrayContains: uid)
+          .orderBy("lastMessageDate", descending: true));
 
-  Future<Chat?> fetchChat(String chatId) async =>
-      await remoteDatabase.getDocument(chatId);
+  Future<Chat?> fetchChat(String chatId) async => await get(chatId);
 
   Future<List<Message>> fetchMessagesForChat(String chatId) =>
       getQuerySubcollection(
@@ -49,27 +48,34 @@ class ChatsRepository extends BaseRepository<Chat, Message>
       );
 
   @override
-  Future<void> addResearchIdToChat(String chatId, String researchId) async =>
+  Future<void> addResearchIdToPeerChat(
+    String chatId,
+    String researchId,
+  ) async =>
       await updateFieldArrayUnion(chatId, 'researchsInCommon', [researchId]);
 
   @override
   Future<void> removeResearchIdFromChat(
           String chatId, String researchId) async =>
-      await updateFieldArrayRemove(chatId, 'researchsInCommon', [researchId]);
-
-  Future<void> removeParticipantFromGroupChat(
-    String chatId,
-    Participant participant,
-  ) async {
-    await updateFieldArrayRemove(
-        chatId, 'participants', [participant.toPartialMap()]);
-    await updateFieldArrayRemove(
-        chatId, 'membersIds', [participant.participantId]);
-  }
+      await remoteDatabase.docExists(chatId)
+          ? await updateFieldArrayRemove(
+              chatId, 'researchsInCommon', [researchId])
+          : null;
 
   @override
-  Future<void> createMessage(String chatId, Message message) async =>
-      await createSubdocument(chatId, message.messageId, message);
+  Future<void> createMessage(Chat chat, Message message) async {
+    await createSubdocument(chat.chatId, message.messageId, message);
+
+    await remoteDatabase.updateDocumentRaw({
+      'lastMessageSenderId': message.fromId,
+      'lastMessage': message.content,
+      'lastMessageDate': message.timeStamp,
+      'dateOpenedByMembers': {
+        ...chat.dateOpenedByMembers,
+        message.fromId: message.timeStamp,
+      },
+    }, chat.chatId);
+  }
 
   @override
   Stream<List<Message>> streamMessages(String chatId) =>
@@ -92,6 +98,113 @@ class ChatsRepository extends BaseRepository<Chat, Message>
         groupId,
         'groupName',
         newName,
+      );
+
+  Future<void> updateParticipant(
+    String chatId,
+    Participant participant,
+  ) async {
+    final chat = await get(chatId) ?? Chat(const {});
+    if (chat is GroupChat) {
+      await updateData(
+          copyChatWith(
+            chat,
+            participants: [
+              for (final part in chat.participants)
+                if (part.participantId == participant.participantId)
+                  participant
+                else
+                  part,
+            ],
+          ),
+          chatId);
+    } else {
+      await updateField(chatId, 'participant', participant.toPartialMap());
+    }
+  }
+
+  Future<void> updateResearcher(
+    String chatId,
+    Researcher researcher,
+  ) async =>
+      await updateField(chatId, 'researcher', researcher.toPartialMap());
+
+  Future<void> addParticipantToGroupChat(
+      String groupId, Participant participant) async {
+    final groupChatExists = await remoteDatabase.docExists(groupId);
+
+    groupChatExists
+        ? await remoteDatabase.updateDocumentRaw(
+            {
+              'participants':
+                  FieldValue.arrayUnion([participant.toPartialMap()]),
+              'membersIds': FieldValue.arrayUnion([participant.participantId]),
+              'dateOpenedByMembers.${participant.participantId}':
+                  Timestamp.now(),
+            },
+            groupId,
+          )
+        : null;
+  }
+
+  Future<void> removeParticipantFromGroupChat(
+    String chatId,
+    String participantId,
+  ) async {
+    final groupChat = await get(chatId) as GroupChat?;
+
+    groupChat != null
+        ? await remoteDatabase.updateDocumentRaw(
+            {
+              'participants': [
+                for (final p in groupChat.participants)
+                  if (p.participantId != participantId) p.toPartialMap()
+              ],
+              'membersIds': FieldValue.arrayRemove([participantId]),
+              'dateOpenedByMembers.$participantId': FieldValue.delete(),
+            },
+            chatId,
+          )
+        : null;
+  }
+
+  Future<void> removeGroup(String groupId) async => await delete(groupId);
+
+  Future<void> changeParticipantGroupChat(
+    GroupChat? groupChatFrom,
+    GroupChat? groupChatTo,
+    Participant participant,
+  ) async {
+    final participantId = participant.participantId;
+    if (groupChatFrom != null) {
+      final fromUpdated = _removeParticipant(groupChatFrom, participantId);
+      await updateData(fromUpdated, fromUpdated.chatId);
+    }
+    if (groupChatTo != null) {
+      final toUpdated = _addParticipant(groupChatTo, participant);
+      await updateData(toUpdated, toUpdated.chatId);
+    }
+  }
+
+  Chat _addParticipant(GroupChat groupChatTo, Participant participant) =>
+      copyChatWith(
+        groupChatTo,
+        membersIds: groupChatTo.membersIds..add(participant.participantId),
+        participants: groupChatTo.participants..add(participant),
+        dateOpenedByMembers: groupChatTo.dateOpenedByMembers
+          ..[participant.participantId] = Timestamp.now(),
+      );
+
+  Chat _removeParticipant(GroupChat groupChatFrom, String participantId) =>
+      copyChatWith(
+        groupChatFrom,
+        membersIds: groupChatFrom.membersIds..remove(participantId),
+        dateOpenedByMembers: groupChatFrom.dateOpenedByMembers
+          ..remove(participantId),
+        participants: groupChatFrom.participants
+          ..removeWhere(
+            (p) => p.participantId == participantId,
+          ),
       );
 }
 

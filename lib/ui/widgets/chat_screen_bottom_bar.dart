@@ -81,10 +81,10 @@ class _ChatScreenBottomBarState extends ConsumerState<ChatScreenBottomBar> {
                   );
 
                   if (chat is GroupChat) {
-                    chatsNotifier.sendMessage(chat.chatId, newMessage);
+                    chatsNotifier.sendMessage(chat, newMessage);
                   } else if (chat is PeerChat) {
                     chatsNotifier.sendMessage(
-                      chat.chatId,
+                      chat,
                       newMessage.copyWith(
                           toId: (chat as PeerChat).researcher.researcherId),
                     );
