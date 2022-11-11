@@ -11,9 +11,6 @@ dependencies:
     sdk: flutter
   # reach_core:
   #   path: /Users/fahad/AndroidStudioProjects/reach_researchers/packages/reach_core
-  # reach:
-  #   path: /Users/fahad/AndroidStudioProjects/reach_researchers
-
   reach_core:
     git: 
       url: https://github.com/FahadMajed/reach_core
