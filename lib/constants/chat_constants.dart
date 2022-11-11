@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:reach_core/core/theme/colors.dart';
+import 'package:reach_core/lib.dart';
 
 const myMessageOutterPadding = EdgeInsets.fromLTRB(30, 2, 10, 2);
 const peerMessagePadding = EdgeInsets.fromLTRB(10, 2, 30, 2);
@@ -17,8 +16,8 @@ final messageTextFieldDecoration = InputDecoration(
   border: const OutlineInputBorder(
     borderRadius: BorderRadius.all(Radius.circular(30.0)),
   ),
-  focusedBorder: OutlineInputBorder(
+  focusedBorder: const OutlineInputBorder(
     borderSide: BorderSide(color: darkBlue, width: 2.0),
-    borderRadius: const BorderRadius.all(Radius.circular(30.0)),
+    borderRadius: BorderRadius.all(Radius.circular(30.0)),
   ),
 );

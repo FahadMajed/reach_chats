@@ -10,13 +10,9 @@ dependencies:
   flutter:
     sdk: flutter
   reach_core:
-    path: /Users/fahad/AndroidStudioProjects/reach_core
-  reach_auth:
-    path: /Users/fahad/AndroidStudioProjects/reach_auth
-  reach_research:
-    path: /Users/fahad/AndroidStudioProjects/reach_research
-  reach:
-    path: /Users/fahad/AndroidStudioProjects/reach_researchers
+    path: /Users/fahad/AndroidStudioProjects/reach_researchers/packages/reach_core
+  # reach:
+  #   path: /Users/fahad/AndroidStudioProjects/reach_researchers
 
 
 

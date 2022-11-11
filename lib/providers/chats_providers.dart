@@ -8,11 +8,10 @@ final messagesStreamPvdr = StreamProvider.family<List<Message>, String?>(
 
 final chatsStreamPvdr = StreamProvider<List<Chat>>(
   ((ref) {
-    final userId = ref.watch(userPvdr).value?.uid ?? "";
+    final userId = ref.watch(userIdPvdr);
 
-    final chatsRepo = ref.watch(chatsRepoPvdr);
-    return chatsRepo.streamChats(userId);
+    return ref.read(chatsRepoPvdr).streamChats(userId);
   }),
 );
 
-final chatIdPvdr = Provider<String>(((ref) => ""));
+final openedChatPvdr = StateProvider<Chat>(((ref) => PeerChat.empty()));

@@ -1,6 +1,5 @@
 export 'chats.dart';
 export 'constants/constants.dart';
-
 export 'data/data.dart';
 export 'domain/domain.dart';
 export 'providers/providers.dart';
